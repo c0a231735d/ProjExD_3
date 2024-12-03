@@ -163,10 +163,8 @@ def main():
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
     bg_img = pg.image.load("fig/pg_bg.jpg")
     bird = Bird((300, 200))
-    bomb = Bomb((255, 0, 0), 10)
-    beam = None  # Beam(bird)  # ビームインスタンス生成
-    # bomb2 = Bomb((0, 0, 255), 20)   
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)] 
+    beams = []  # 複数のビームを管理するリスト
     clock = pg.time.Clock()
     tmr = 0
     score = Score()
@@ -177,9 +175,9 @@ def main():
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 # スペースキー押下でBeamクラスのインスタンス生成
-                beam = Beam(bird)            
+                beams.append(Beam(bird))  # 新しいビームをリストに追加
+                
         screen.blit(bg_img, [0, 0])
-        
         
         for bomb in bombs:
             if bird.rct.colliderect(bomb.rct):
@@ -192,29 +190,35 @@ def main():
                 time.sleep(1)
                 return
 
-        for i, bomb in enumerate(bombs):
-            if beam is not None:
-                if beam.rct.colliderect(bomb.rct):  # ビームが爆弾を撃ち落としたら
-                    beam = None
-                    bombs[i] = None
+        # ビームと爆弾の衝突判定
+        for beam in beams[:]:  # リストを複製してループ内で安全に削除
+            for bomb in bombs[:]:
+                if beam.rct.colliderect(bomb.rct):
+                    beams.remove(beam)  # ビームを削除
+                    bombs.remove(bomb)  # 爆弾を削除
                     bird.change_img(6, screen)
                     score.increment()
-                    pg.display.update()
-
+                    break  # 1つのビームは1つの爆弾にしか当たらない
+        
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
-        # beam.update(screen)
-        bombs = [bomb for bomb in bombs if bomb is not None]  # Noneでないものリスト
+        
+        # ビームを更新・描画
+        for beam in beams[:]:  # リストを複製してループ内で安全に削除
+            beam.update(screen)
+            # 画面外に出たビームを削除
+            if not check_bound(beam.rct) == (True, True):
+                beams.remove(beam)
+        
+        # 爆弾を更新・描画
         for bomb in bombs:
             bomb.update(screen)
-        if beam is not None:
-            beam.update(screen)
-            
+        
         score.update(screen)
-        # bomb2.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
+
         
         
 
