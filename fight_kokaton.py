@@ -237,10 +237,9 @@ def main():
         bird.update(key_lst, screen)
 
         # ビームの更新
-        for beam in beams[:]:
+        beams = [beam for beam in beams if beam and check_bound(beam.rct) == (True, True)]
+        for beam in beams:
             beam.update(screen)
-            if not check_bound(beam.rct) == (True, True):
-                beams.remove(beam)  # 画面外のビームを削除
 
         # 爆弾の更新
         for bomb in bombs:
