@@ -157,70 +157,104 @@ class Score:
 
     def increment(self):
         self.score += 1
+        
+class Explosion:
+    """
+    爆発エフェクトを管理するクラス
+    """
+    def __init__(self, center: tuple[int, int]):
+        """
+        爆発エフェクトを生成する
+        引数 center：爆発エフェクトの中心座標
+        """
+        img = pg.image.load("fig/explosion.gif")  # 爆発画像を読み込み
+        self.imgs = [
+            img,
+            pg.transform.flip(img, True, False),  # 水平方向に反転
+            pg.transform.flip(img, False, True),  # 垂直方向に反転
+            pg.transform.flip(img, True, True)   # 水平・垂直方向に反転
+        ]
+        self.index = 0  # 現在表示している画像のインデックス
+        self.life = 20  # 爆発が表示されるフレーム数
+        self.rct = self.imgs[0].get_rect()
+        self.rct.center = center
+
+    def update(self, screen: pg.Surface):
+        """
+        爆発エフェクトを更新し描画する
+        引数 screen：画面Surface
+        """
+        self.life -= 1  # 爆発の寿命を減らす
+        if self.life > 0:
+            self.index = (self.index + 1) % len(self.imgs)  # アニメーションを切り替え
+            screen.blit(self.imgs[self.index], self.rct)
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
-    screen = pg.display.set_mode((WIDTH, HEIGHT))    
+    screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
     bird = Bird((300, 200))
-    bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)] 
-    beams = []  # 複数のビームを管理するリスト
+    bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
+    beams = []  # ビームのリスト
+    explosions = []  # 爆発エフェクトのリスト
     clock = pg.time.Clock()
     tmr = 0
     score = Score()
-    
+
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                # スペースキー押下でBeamクラスのインスタンス生成
-                beams.append(Beam(bird))  # 新しいビームをリストに追加
-                
+                beams.append(Beam(bird))  # ビームを生成
+
         screen.blit(bg_img, [0, 0])
-        
+
+        # ゲームオーバー処理
         for bomb in bombs:
             if bird.rct.colliderect(bomb.rct):
-                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
                 bird.change_img(8, screen)
-                fonto = pg.font.Font(None, 80) 
-                txt = fonto.render("Game Over", True, (255, 0, 0)) 
-                screen.blit(txt, [WIDTH//2-150, HEIGHT//2])
+                fonto = pg.font.Font(None, 80)
+                txt = fonto.render("Game Over", True, (255, 0, 0))
+                screen.blit(txt, [WIDTH // 2 - 150, HEIGHT // 2])
                 pg.display.update()
                 time.sleep(1)
                 return
 
-        # ビームと爆弾の衝突判定
-        for beam in beams[:]:  # リストを複製してループ内で安全に削除
+        # ビームと爆弾の衝突処理
+        for beam in beams[:]:
             for bomb in bombs[:]:
                 if beam.rct.colliderect(bomb.rct):
                     beams.remove(beam)  # ビームを削除
                     bombs.remove(bomb)  # 爆弾を削除
+                    explosions.append(Explosion(bomb.rct.center))  # 爆発エフェクトを追加
                     bird.change_img(6, screen)
                     score.increment()
-                    break  # 1つのビームは1つの爆弾にしか当たらない
-        
+                    break  # ビームは1つの爆弾にしか当たらない
+
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
-        
-        # ビームを更新・描画
-        for beam in beams[:]:  # リストを複製してループ内で安全に削除
+
+        # ビームの更新
+        for beam in beams[:]:
             beam.update(screen)
-            # 画面外に出たビームを削除
             if not check_bound(beam.rct) == (True, True):
-                beams.remove(beam)
-        
-        # 爆弾を更新・描画
+                beams.remove(beam)  # 画面外のビームを削除
+
+        # 爆弾の更新
         for bomb in bombs:
             bomb.update(screen)
-        
+
+        # 爆発エフェクトの更新
+        explosions = [ex for ex in explosions if ex.life > 0]  # life > 0 のみ残す
+        for ex in explosions:
+            ex.update(screen)
+
         score.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
-
-        
-        
 
 
 if __name__ == "__main__":
