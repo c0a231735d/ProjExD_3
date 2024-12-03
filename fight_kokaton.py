@@ -223,7 +223,7 @@ def main():
                 return
 
         # ビームと爆弾の衝突処理
-        for beam in beams[:]:
+        for j, beam in enumerate(beams):
             for bomb in bombs[:]:
                 if beam.rct.colliderect(bomb.rct):
                     beams.remove(beam)  # ビームを削除
